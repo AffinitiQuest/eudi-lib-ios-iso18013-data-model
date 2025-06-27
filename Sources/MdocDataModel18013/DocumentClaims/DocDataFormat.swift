@@ -7,12 +7,14 @@ import Foundation
 public enum DocDataFormat: String, Sendable, CustomStringConvertible, CustomDebugStringConvertible, Codable {
 	case cbor = "cbor"
 	case sdjwt = "sjwt"
+    case w3cjwt = "w3cjwt"
 
     /// A description to display
     public var description: String {
         switch self {
         case .cbor: return "mso_mdoc"
         case .sdjwt: return "vc+sd-jwt"
+        case .w3cjwt: return "jwt_vc_json"
         }
     }
 
