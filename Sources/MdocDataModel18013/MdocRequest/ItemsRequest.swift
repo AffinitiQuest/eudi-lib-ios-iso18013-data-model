@@ -24,7 +24,7 @@ public struct ItemsRequest: Sendable {
 	/// Requested data elements for each NameSpace
     public let requestNameSpaces: RequestNameSpaces
 	/// May be used by the mdoc reader to provide additional information
-    let requestInfo: CBOR?
+    public let requestInfo: CBOR?
 
     enum Keys: String {
         case docType

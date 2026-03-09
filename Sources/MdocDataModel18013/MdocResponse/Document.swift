@@ -43,6 +43,28 @@ public struct Document: Sendable {
 	}
 }
 
+public struct W3CDocument: Sendable {
+    public let docType: DocType
+    public let jwt: String
+    public let deviceAuth: DeviceAuth
+
+    public let errors: Errors?
+
+    enum Keys:String {
+        case docType
+        case jwt
+        case deviceAuth
+        case errors
+    }
+
+    public init(docType: DocType, jwt: String, deviceAuth: DeviceAuth, errors: Errors? = nil) {
+        self.docType = docType
+        self.jwt = jwt
+        self.deviceAuth = deviceAuth
+        self.errors = errors
+    }
+}
+
 extension Document: CBORDecodable {
 	public init(cbor: CBOR) throws(MdocValidationError) {
 		guard case .map(let cd) = cbor else { throw .invalidCbor("document") }
@@ -65,6 +87,37 @@ extension Document: CBOREncodable {
 		if let errors = errors { cbor[.utf8String(Keys.errors.rawValue)] = errors.toCBOR(options: options) }
 		return .map(cbor)
 	}
+}
+
+extension W3CDocument: CBORDecodable {
+    public init(cbor: CBOR) throws(MdocValidationError) {
+        guard case .map(let cd) = cbor else { throw .invalidCbor("document") }
+        guard case .utf8String(let dt) = cd[Keys.docType] else { throw .missingField("W3CDocument", Keys.docType.rawValue) }
+        docType = dt
+        guard case .utf8String(let jt) = cd[Keys.jwt] else { throw .missingField("W3CDocument", Keys.jwt.rawValue) }
+        jwt = jt
+        guard let cda = cd[Keys.deviceAuth] else { throw .missingField("W3CDocument", Keys.deviceAuth.rawValue) }
+        deviceAuth = try DeviceAuth(cbor: cda)
+        if let ce = cd[Keys.errors] { errors = try Errors(cbor: ce) } else { errors = nil }
+	}
+}
+
+extension W3CDocument: CBOREncodable {
+    public func toCBOR(options: CBOROptions) -> CBOR {
+        var cbor = OrderedDictionary<CBOR, CBOR>()
+        cbor[.utf8String(Keys.docType.rawValue)] = .utf8String(docType)
+        cbor[.utf8String(Keys.jwt.rawValue)] = .utf8String(jwt)
+        cbor[.utf8String(Keys.deviceAuth.rawValue)] = deviceAuth.toCBOR(options: options)
+        if let errors { cbor[.utf8String(Keys.errors.rawValue)] = errors.toCBOR(options: options) }
+        return .map(cbor)
+    }
+}
+
+extension Array where Element == W3CDocument {
+    public func findDoc(name: String) -> (W3CDocument, Int)? {
+        guard let index = firstIndex(where: { $0.docType == name} ) else { return nil }
+        return (self[index], index)
+    }
 }
 
 extension Array where Element == Document {
