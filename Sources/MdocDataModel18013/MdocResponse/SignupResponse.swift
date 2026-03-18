@@ -47,7 +47,10 @@ public struct SignUpResponse: Codable, Sendable {
 	/// - Returns:  separate ``MdocDataModel18013.DeviceResponse`` objects for each doc.type
 	public static func decomposeCBORDeviceResponse(data: Data) -> [(docType: String, dr: DeviceResponse, iss: IssuerSigned)]? {
 		guard let sr = data.decodeJSON(type: SignUpResponse.self), let dr = sr.deviceResponse, let docs = dr.documents else { return nil }
-		return docs.map { (docType: $0.docType, dr: DeviceResponse(version: dr.version, documents: [$0], status: dr.status), iss: $0.issuerSigned) }
+		return docs.compactMap { doc -> (docType: String, dr: DeviceResponse, iss: IssuerSigned)? in
+			guard case .cbor(let d) = doc else { return nil }
+			return (docType: d.docType, dr: DeviceResponse(version: dr.version, documents: [doc], status: dr.status), iss: d.issuerSigned)
+		}
 	}
 
 }

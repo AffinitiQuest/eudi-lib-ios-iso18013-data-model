@@ -120,6 +120,95 @@ extension Array where Element == W3CDocument {
     }
 }
 
+public struct SdJwtDocument: Sendable {
+    public let docType: DocType
+    public let sdJwt: String
+    public let deviceAuth: DeviceAuth
+    public let errors: Errors?
+
+    enum Keys: String {
+        case docType
+        case sdJwt
+        case deviceAuth
+        case errors
+    }
+
+    public init(docType: DocType, sdJwt: String, deviceAuth: DeviceAuth, errors: Errors? = nil) {
+        self.docType = docType
+        self.sdJwt = sdJwt
+        self.deviceAuth = deviceAuth
+        self.errors = errors
+    }
+}
+
+extension SdJwtDocument: CBORDecodable {
+    public init(cbor: CBOR) throws(MdocValidationError) {
+        guard case .map(let cd) = cbor else { throw .invalidCbor("document") }
+        guard case .utf8String(let dt) = cd[Keys.docType] else { throw .missingField("SdJwtDocument", Keys.docType.rawValue) }
+        docType = dt
+        guard case .utf8String(let sj) = cd[Keys.sdJwt] else { throw .missingField("SdJwtDocument", Keys.sdJwt.rawValue) }
+        sdJwt = sj
+        guard let cda = cd[Keys.deviceAuth] else { throw .missingField("SdJwtDocument", Keys.deviceAuth.rawValue) }
+        deviceAuth = try DeviceAuth(cbor: cda)
+        if let ce = cd[Keys.errors] { errors = try Errors(cbor: ce) } else { errors = nil }
+    }
+}
+
+extension SdJwtDocument: CBOREncodable {
+    public func toCBOR(options: CBOROptions) -> CBOR {
+        var cbor = OrderedDictionary<CBOR, CBOR>()
+        cbor[.utf8String(Keys.docType.rawValue)] = .utf8String(docType)
+        cbor[.utf8String(Keys.sdJwt.rawValue)] = .utf8String(sdJwt)
+        cbor[.utf8String(Keys.deviceAuth.rawValue)] = deviceAuth.toCBOR(options: options)
+        if let errors { cbor[.utf8String(Keys.errors.rawValue)] = errors.toCBOR(options: options) }
+        return .map(cbor)
+    }
+}
+
+public enum TransferDocument: Sendable {
+    case cbor(Document)
+    case w3cJwt(W3CDocument)
+    case sdJwt(SdJwtDocument)
+
+    public var docType: DocType {
+        switch self {
+        case .cbor(let d): d.docType
+        case .w3cJwt(let d): d.docType
+        case .sdJwt(let d): d.docType
+        }
+    }
+}
+
+extension TransferDocument: CBORDecodable {
+    public init(cbor: CBOR) throws(MdocValidationError) {
+        guard case .map(let cd) = cbor else { throw .invalidCbor("TransferDocument") }
+        if cd[.utf8String("issuerSigned")] != nil {
+            self = .cbor(try Document(cbor: cbor))
+        } else if cd[.utf8String("jwt")] != nil {
+            self = .w3cJwt(try W3CDocument(cbor: cbor))
+        } else if cd[.utf8String("sdJwt")] != nil {
+            self = .sdJwt(try SdJwtDocument(cbor: cbor))
+        } else { throw .invalidCbor("TransferDocument") }
+    }
+}
+
+extension TransferDocument: CBOREncodable {
+    public func toCBOR(options: CBOROptions) -> CBOR {
+        switch self {
+        case .cbor(let d): d.toCBOR(options: options)
+        case .w3cJwt(let d): d.toCBOR(options: options)
+        case .sdJwt(let d): d.toCBOR(options: options)
+        }
+    }
+}
+
+extension Array where Element == TransferDocument {
+    public func findDoc(name: String) -> (TransferDocument, Int)? {
+        guard let index = firstIndex(where: { $0.docType == name }) else { return nil }
+        return (self[index], index)
+    }
+}
+
 extension Array where Element == Document {
 	public func findDoc(name: String) -> (Document, Int)? {
 		guard let index = firstIndex(where: { $0.docType == name} ) else { return nil }

@@ -30,8 +30,7 @@ public struct DeviceResponse: Sendable {
 	public let version: String
 	public static let defaultVersion = "1.0"
 	/// An array of all returned documents
-	public let documents: [Document]?
-    public var w3cDocuments: [W3CDocument]?
+	public var documents: [TransferDocument]?
 	/// An array of all returned document errors
 	public let documentErrors: [DocumentError]?
 	public let status: UInt64
@@ -39,18 +38,16 @@ public struct DeviceResponse: Sendable {
 	enum Keys: String {
 		case version
 		case documents
-        case w3cDocuments
 		case documentErrors
 		case status
 	}
 
-    public init(version: String? = nil, documents: [Document]? = nil, w3cDocuments: [W3CDocument]? = nil, documentErrors: [DocumentError]? = nil, status: UInt64) {
-        self.version = version ?? Self.defaultVersion
-        self.documents = documents
-        self.w3cDocuments = w3cDocuments
-        self.documentErrors = documentErrors
-        self.status = status
-    }
+	public init(version: String? = nil, documents: [TransferDocument]? = nil, documentErrors: [DocumentError]? = nil, status: UInt64) {
+		self.version = version ?? Self.defaultVersion
+		self.documents = documents
+		self.documentErrors = documentErrors
+		self.status = status
+	}
 }
 
 extension DeviceResponse: CBORDecodable {
@@ -59,13 +56,9 @@ extension DeviceResponse: CBORDecodable {
 		guard case .utf8String(let v) = cd[Keys.version] else { throw .missingField("DeviceResponse", Keys.version.rawValue) }
 		version = v
 		if case let .array(ds) = cd[Keys.documents] {
-			let ds = try ds.map { d  throws(MdocValidationError) in try Document(cbor:d) }
+			let ds = try ds.map { d throws(MdocValidationError) in try TransferDocument(cbor: d) }
 			if ds.count > 0 { self.documents = ds } else { self.documents = nil }
 		} else { documents = nil }
-        if case let .array(ar) = cd[Keys.w3cDocuments] {
-            let wd = try ar.map { w  throws(MdocValidationError) in try W3CDocument(cbor:w) }
-            if wd.count > 0 { w3cDocuments = wd } else { w3cDocuments = nil }
-        } else { w3cDocuments = nil }
 		if case let .array(are) = cd[Keys.documentErrors] {
 			let de = try are.map { d throws(MdocValidationError) in try DocumentError(cbor:d) }
 			if de.count > 0 { self.documentErrors = de } else { self.documentErrors = nil }
@@ -80,10 +73,8 @@ extension DeviceResponse: CBOREncodable {
 		var cbor = OrderedDictionary<CBOR, CBOR>()
 		cbor[.utf8String(Keys.version.rawValue)] = .utf8String(version)
 		if let ds = documents { cbor[.utf8String(Keys.documents.rawValue)] = ds.toCBOR(options: options) }
-        if let wd = w3cDocuments { cbor[.utf8String(Keys.w3cDocuments.rawValue)] = wd.toCBOR(options: options) }
 		if let de = documentErrors { cbor[.utf8String(Keys.documentErrors.rawValue)] = .array(de.map {$0.toCBOR(options: options)}) }
 		cbor[.utf8String(Keys.status.rawValue)] = .unsignedInt(status)
 		return .map(cbor)
 	}
 }
-
