@@ -25,6 +25,8 @@ public struct DocMetadata: Sendable, Codable {
 	public let docType: String?
 	/// the full credential type array for W3C JWT-VC (jwt_vc_json) credentials
 	public let docTypes: [String]?
+	/// IRI-expanded type strings for LDP-VC (ldp_vc) credentials — raw types + fully expanded IRIs, computed at issuance time for DCQL matching
+	public var ldpIRIExpansionStrings: [String]?
 	/// get display name of the document for the given culture
 	public func getDisplayName(_ uiCulture: String?) -> String? { display?.getName(uiCulture) }
 	/// display properties for the document
@@ -36,11 +38,12 @@ public struct DocMetadata: Sendable, Codable {
 	/// claims (for mso-mdoc and sd-jwt documents)
 	public let claims: [DocClaimMetadata]?
 
-	public init(credentialIssuerIdentifier: String, configurationIdentifier: String, docType: String?, docTypes: [String]? = nil, display: [DisplayMetadata]?, issuerDisplay: [DisplayMetadata]?, claims: [DocClaimMetadata]? = nil) {
+	public init(credentialIssuerIdentifier: String, configurationIdentifier: String, docType: String?, docTypes: [String]? = nil, ldpIRIExpansionStrings: [String]? = nil, display: [DisplayMetadata]?, issuerDisplay: [DisplayMetadata]?, claims: [DocClaimMetadata]? = nil) {
 		self.credentialIssuerIdentifier = credentialIssuerIdentifier
 		self.configurationIdentifier = configurationIdentifier
 		self.docType = docType
 		self.docTypes = docTypes
+		self.ldpIRIExpansionStrings = ldpIRIExpansionStrings
 		self.display = display
 		self.issuerDisplay = issuerDisplay
 		self.claims = claims

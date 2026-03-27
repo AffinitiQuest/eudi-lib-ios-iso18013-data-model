@@ -24,6 +24,7 @@ public enum DocDataFormat: String, Sendable, CustomStringConvertible, CustomDebu
 	case cbor = "cbor"
 	case sdjwt = "sjwt"
     case w3cJwt = "w3cjwt"
+    case ldpVc = "ldvc"
 
     /// A description to display
     public var description: String {
@@ -31,10 +32,9 @@ public enum DocDataFormat: String, Sendable, CustomStringConvertible, CustomDebu
         case .cbor: return "mso_mdoc"
         case .sdjwt: return "vc+sd-jwt"
         case .w3cJwt: return "jwt_vc_json"
+        case .ldpVc: return "ldp_vc"
         }
     }
 
-    public var debugDescription: String {
-        description
-    }
+    public var debugDescription: String { description }
 }
