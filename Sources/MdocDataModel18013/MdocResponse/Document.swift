@@ -165,16 +165,62 @@ extension SdJwtDocument: CBOREncodable {
     }
 }
 
+public struct LdpVcDocument: Sendable {
+    public let docType: DocType
+    public let ldpVc: String
+    public let deviceAuth: DeviceAuth?
+    public let errors: Errors?
+
+    enum Keys: String {
+        case docType
+        case ldpVc
+        case deviceAuth
+        case errors
+    }
+
+    public init(docType: DocType, ldpVc: String, deviceAuth: DeviceAuth? = nil, errors: Errors? = nil) {
+        self.docType = docType
+        self.ldpVc = ldpVc
+        self.deviceAuth = deviceAuth
+        self.errors = errors
+    }
+}
+
+extension LdpVcDocument: CBORDecodable {
+    public init(cbor: CBOR) throws(MdocValidationError) {
+        guard case .map(let cd) = cbor else { throw .invalidCbor("document") }
+        guard case .utf8String(let dt) = cd[Keys.docType] else { throw .missingField("LdpVcDocument", Keys.docType.rawValue) }
+        docType = dt
+        guard case .utf8String(let lv) = cd[Keys.ldpVc] else { throw .missingField("LdpVcDocument", Keys.ldpVc.rawValue) }
+        ldpVc = lv
+        if let cda = cd[Keys.deviceAuth] { deviceAuth = try DeviceAuth(cbor: cda) } else { deviceAuth = nil }
+        if let ce = cd[Keys.errors] { errors = try Errors(cbor: ce) } else { errors = nil }
+    }
+}
+
+extension LdpVcDocument: CBOREncodable {
+    public func toCBOR(options: CBOROptions) -> CBOR {
+        var cbor = OrderedDictionary<CBOR, CBOR>()
+        cbor[.utf8String(Keys.docType.rawValue)] = .utf8String(docType)
+        cbor[.utf8String(Keys.ldpVc.rawValue)] = .utf8String(ldpVc)
+        if let deviceAuth { cbor[.utf8String(Keys.deviceAuth.rawValue)] = deviceAuth.toCBOR(options: options) }
+        if let errors { cbor[.utf8String(Keys.errors.rawValue)] = errors.toCBOR(options: options) }
+        return .map(cbor)
+    }
+}
+
 public enum TransferDocument: Sendable {
     case cbor(Document)
     case w3cJwt(W3CDocument)
     case sdJwt(SdJwtDocument)
+    case ldpVc(LdpVcDocument)
 
     public var docType: DocType {
         switch self {
         case .cbor(let d): d.docType
         case .w3cJwt(let d): d.docType
         case .sdJwt(let d): d.docType
+        case .ldpVc(let d): d.docType
         }
     }
 }
@@ -188,6 +234,8 @@ extension TransferDocument: CBORDecodable {
             self = .w3cJwt(try W3CDocument(cbor: cbor))
         } else if cd[.utf8String("sdJwt")] != nil {
             self = .sdJwt(try SdJwtDocument(cbor: cbor))
+        } else if cd[.utf8String("ldpVc")] != nil {
+            self = .ldpVc(try LdpVcDocument(cbor: cbor))
         } else { throw .invalidCbor("TransferDocument") }
     }
 }
@@ -198,6 +246,7 @@ extension TransferDocument: CBOREncodable {
         case .cbor(let d): d.toCBOR(options: options)
         case .w3cJwt(let d): d.toCBOR(options: options)
         case .sdJwt(let d): d.toCBOR(options: options)
+        case .ldpVc(let d): d.toCBOR(options: options)
         }
     }
 }
