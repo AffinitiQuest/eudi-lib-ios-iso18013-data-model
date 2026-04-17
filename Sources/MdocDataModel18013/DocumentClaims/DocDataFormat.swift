@@ -22,7 +22,7 @@ import Foundation
 /// Raw value must be a 4-length string due to keychain requirements
 public enum DocDataFormat: String, Sendable, CustomStringConvertible, CustomDebugStringConvertible, Codable {
 	case cbor = "cbor"
-	case sdjwt = "sjwt"
+	case sdjwt = "sd-jwt"
     case w3cJwt = "w3cjwt"
     case ldpVc = "ldvc"
 
